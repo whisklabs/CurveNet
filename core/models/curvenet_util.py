@@ -66,11 +66,14 @@ def index_points(points, idx):
     """
     device = points.device
     B = points.shape[0]
+    N = points.shape[1]
     view_shape = list(idx.shape)
     view_shape[1:] = [1] * (len(view_shape) - 1)
     repeat_shape = list(idx.shape)
     repeat_shape[0] = 1
     batch_indices = torch.arange(B, dtype=torch.long).to(device).view(view_shape).repeat(repeat_shape)
+    # Clamp indices to valid range to prevent out-of-bounds errors
+    idx = idx.clamp(0, N - 1)
     new_points = points[batch_indices, idx, :]
     return new_points
 
@@ -116,6 +119,15 @@ def query_ball_point(radius, nsample, xyz, new_xyz):
     group_idx[sqrdists > radius ** 2] = N
     group_idx = group_idx.sort(dim=-1)[0][:, :, :nsample]
     group_first = group_idx[:, :, 0].view(B, S, 1).repeat([1, 1, nsample])
+    # Fix: If all points are outside radius, group_first will be N (out of bounds).
+    # In this case, use the nearest point (index 0 from sorted distances) as fallback.
+    # Find cases where even the first point is out of radius
+    all_outside_mask = group_first[:, :, 0:1] == N  # [B, S, 1]
+    if all_outside_mask.any():
+        # For query points with no neighbors in radius, use nearest neighbor instead
+        nearest_idx = sqrdists.argmin(dim=-1, keepdim=True)  # [B, S, 1]
+        nearest_idx_expanded = nearest_idx.expand(-1, -1, nsample)  # [B, S, nsample]
+        group_first = torch.where(all_outside_mask.expand(-1, -1, nsample), nearest_idx_expanded, group_first)
     mask = group_idx == N
     group_idx[mask] = group_first[mask]
     return group_idx
@@ -214,7 +226,8 @@ class LPFA(nn.Module):
         if idx is None:
             idx = knn(xyz, k=self.k)[:,:,:self.k]  # (batch_size, num_points, k)
 
-        idx_base = torch.arange(0, batch_size, device=self.device).view(-1, 1, 1) * num_points
+        # Use xyz.device instead of self.device to support export on different devices
+        idx_base = torch.arange(0, batch_size, device=xyz.device).view(-1, 1, 1) * num_points
         idx = idx + idx_base
         idx = idx.view(-1)
 
