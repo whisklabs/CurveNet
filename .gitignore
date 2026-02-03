@@ -1,0 +1,201 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.jsonl
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# DVC - track .dvc files in git
+!*.dvc
+!.dvc/
+
+# ML/AI specific
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.hdf5
+*.ckpt
+*.pth
+*.pt
+*.bin
+*.safetensors
+*.onnx
+*.tflite
+*.pb
+*.pkl
+*.npy
+*.npz
+
+data/**/*
+!data/**/*.dvc
+!data/**/.gitignore
+datasets/
+raw_data/
+processed_data/
+
+# Model outputs and checkpoints
+checkpoints/
+outputs/
+logs/
+runs/
+tb_logs/*
+tb_logs/
+wandb/
+tensorboard_logs/
+mlruns/
+
+# Temporary files
+tmp/
+temp/
+tmp_out/
+*.tmp
+*.temp
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Large files that shouldn't be in git
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Configuration files with secrets
+config.json
+secrets.json
+.secrets
+*.key
+*.pem
+
+# Jupyter notebook outputs (optional - uncomment if you want to ignore outputs)
+# *.ipynb
+/whisk/
+/.env*
+
+# DVC files should be tracked in git (must be at the end to override other rules)
+!*.dvc
+!**/*.dvc
+/local_metrics/
+
+# Debug files from Gemini API error handling
+debug_gemini_errors/
+/tests/locust/fixtures/
+
+# DSPy optimization experiment artifacts (generated during runs)
+results/
+binary_baseline_prompt.txt
+binary_judge_split.json
+judge_seeded_*.json
+judge_seeded_*.txt
+optimized_judge_*.txt
+
+# CurveNet (external dependency, not part of this project)
+CurveNet/
+
+
+test_results/
