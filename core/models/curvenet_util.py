@@ -90,14 +90,14 @@ def farthest_point_sample(xyz, npoint):
     B, N, C = xyz.shape
     centroids = torch.zeros(B, npoint, dtype=torch.long).to(device)
     distance = torch.ones(B, N).to(device) * 1e10
-    farthest = torch.randint(0, N, (B,), dtype=torch.long).to(device) * 0
+    farthest = torch.zeros(B, dtype=torch.long, device=device)
     batch_indices = torch.arange(B, dtype=torch.long).to(device)
     for i in range(npoint):
         centroids[:, i] = farthest
         centroid = xyz[batch_indices, farthest, :].view(B, 1, 3)
         dist = torch.sum((xyz - centroid) ** 2, -1)
         mask = dist < distance
-        distance[mask] = dist[mask]
+        distance = torch.where(mask, dist, distance)
         farthest = torch.max(distance, -1)[1]
     return centroids
 
@@ -116,20 +116,20 @@ def query_ball_point(radius, nsample, xyz, new_xyz):
     _, S, _ = new_xyz.shape
     group_idx = torch.arange(N, dtype=torch.long).to(device).view(1, 1, N).repeat([B, S, 1])
     sqrdists = square_distance(new_xyz, xyz)
-    group_idx[sqrdists > radius ** 2] = N
+    group_idx = torch.where(sqrdists > radius ** 2, torch.tensor(N, dtype=torch.long, device=device), group_idx)
     group_idx = group_idx.sort(dim=-1)[0][:, :, :nsample]
     group_first = group_idx[:, :, 0].view(B, S, 1).repeat([1, 1, nsample])
     # Fix: If all points are outside radius, group_first will be N (out of bounds).
     # In this case, use the nearest point (index 0 from sorted distances) as fallback.
     # Find cases where even the first point is out of radius
+    # Fallback: if all points are outside radius, use nearest neighbor
+    # (no if-branch: torch.where is ONNX-compatible and applies only where mask=True)
     all_outside_mask = group_first[:, :, 0:1] == N  # [B, S, 1]
-    if all_outside_mask.any():
-        # For query points with no neighbors in radius, use nearest neighbor instead
-        nearest_idx = sqrdists.argmin(dim=-1, keepdim=True)  # [B, S, 1]
-        nearest_idx_expanded = nearest_idx.expand(-1, -1, nsample)  # [B, S, nsample]
-        group_first = torch.where(all_outside_mask.expand(-1, -1, nsample), nearest_idx_expanded, group_first)
+    nearest_idx = sqrdists.argmin(dim=-1, keepdim=True)  # [B, S, 1]
+    nearest_idx_expanded = nearest_idx.expand(-1, -1, nsample)  # [B, S, nsample]
+    group_first = torch.where(all_outside_mask.expand(-1, -1, nsample), nearest_idx_expanded, group_first)
     mask = group_idx == N
-    group_idx[mask] = group_first[mask]
+    group_idx = torch.where(mask, group_first, group_idx)
     return group_idx
 
 def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False):
@@ -496,8 +496,6 @@ class MaskedMaxPool(nn.Module):
         sub_xyz, neighborhood_features = sample_and_group(self.npoint, self.radius, self.k, xyz, features.transpose(1,2))
 
         neighborhood_features = neighborhood_features.permute(0, 3, 1, 2).contiguous()
-        sub_features = F.max_pool2d(
-            neighborhood_features, kernel_size=[1, neighborhood_features.shape[3]]
-        )  # bs, c, n, 1
-        sub_features = torch.squeeze(sub_features, -1)  # bs, c, n
+        # Use max over last dim instead of max_pool2d with dynamic kernel_size (ONNX compat)
+        sub_features = neighborhood_features.max(dim=-1).values  # bs, c, n
         return sub_xyz, sub_features
